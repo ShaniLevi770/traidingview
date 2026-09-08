@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { verifySession } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { getSignedScreenshotUrl } from "@/lib/supabase/storage";
@@ -39,14 +40,19 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="w-full">
-      <div className="mx-auto w-full max-w-6xl px-4 pt-8">
-        <h1 className="text-2xl font-semibold">
-          {trade.symbol} <span className="font-normal capitalize text-zinc-500">· {trade.side}</span>
-        </h1>
-        <p className="text-sm text-zinc-500">
-          {new Date(trade.entry_time).toLocaleString()}
-          {trade.exit_time && ` → ${new Date(trade.exit_time).toLocaleString()}`}
-        </p>
+      <div className="mx-auto flex w-full max-w-6xl items-start justify-between px-4 pt-8">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            {trade.symbol} <span className="font-normal capitalize text-zinc-500">· {trade.side}</span>
+          </h1>
+          <p className="text-sm text-zinc-500">
+            {new Date(trade.entry_time).toLocaleString()}
+            {trade.exit_time && ` → ${new Date(trade.exit_time).toLocaleString()}`}
+          </p>
+        </div>
+        <Link href={`/journal/${trade.id}/edit`} className="rounded border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700">
+          Edit
+        </Link>
       </div>
 
       {/* Full viewport width, not capped by the page's reading-width container - a chart

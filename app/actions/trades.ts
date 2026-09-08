@@ -90,6 +90,107 @@ export async function createTrade(_prevState: TradeFormState, formData: FormData
   redirect("/journal");
 }
 
+// Same shape as TradeSchema, but entry_price/entry_time are optional: editing
+// a trade whose opening fill wasn't in the imported CSV (entry_known=false)
+// shouldn't force the user to invent an entry price just to add a stop-loss
+// or a note. Leaving entry_price blank keeps the trade's existing pnl/status
+// (already correct, from the broker's own figures) untouched.
+const EditTradeSchema = z
+  .object({
+    symbol: z.string().trim().min(1).toUpperCase(),
+    side: z.enum(["long", "short"]),
+    quantity: z.coerce.number().positive(),
+    entry_price: optionalNumber,
+    entry_time: z.string().optional(),
+    exit_price: optionalNumber,
+    exit_time: z.string().optional(),
+    fees: z.preprocess((v) => (v === "" || v == null ? 0 : Number(v)), z.number().default(0)),
+    planned_stop: optionalNumber,
+    planned_target: optionalNumber,
+    strategy_tag: z.string().trim().optional(),
+    mistake_tags: z.string().optional(),
+    followed_plan: z.enum(["yes", "no", ""]).optional(),
+    notes: z.string().optional(),
+    thesis: z.string().optional(),
+  })
+  .refine((data) => (data.exit_price == null) === (!data.exit_time), {
+    message: "Provide both an exit price and exit date, or neither (still open).",
+  })
+  .refine((data) => data.entry_price == null || !!data.entry_time, {
+    message: "Provide an entry date along with the entry price.",
+  });
+
+export async function updateTrade(tradeId: string, _prevState: TradeFormState, formData: FormData): Promise<TradeFormState> {
+  const { userId } = await verifySession();
+
+  const parsed = EditTradeSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const d = parsed.data;
+
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("trades")
+    .select("pnl, status, entry_known")
+    .eq("id", tradeId)
+    .eq("user_id", userId)
+    .single();
+  if (!existing) return { error: "Trade not found." };
+
+  // Only recompute entry/exit/pnl/status as a bundle when an entry price was
+  // actually provided - otherwise leave those fields exactly as they are
+  // (see EditTradeSchema comment above).
+  const executionFields =
+    d.entry_price != null
+      ? (() => {
+          const isClosed = d.exit_price != null && !!d.exit_time;
+          return {
+            entry_price: d.entry_price,
+            entry_time: new Date(d.entry_time!).toISOString(),
+            entry_known: true,
+            exit_price: d.exit_price ?? null,
+            exit_time: d.exit_time ? new Date(d.exit_time).toISOString() : null,
+            status: isClosed ? ("closed" as const) : ("open" as const),
+            pnl: isClosed ? computePnl(d.side, d.entry_price, d.exit_price!, d.quantity, d.fees) : null,
+          };
+        })()
+      : {};
+
+  let screenshot_url: string | undefined;
+  const screenshotFile = formData.get("screenshot");
+  if (screenshotFile instanceof File && screenshotFile.size > 0) {
+    screenshot_url = await uploadScreenshot(userId, screenshotFile);
+  }
+
+  const { error } = await supabase
+    .from("trades")
+    .update({
+      symbol: d.symbol,
+      side: d.side,
+      quantity: d.quantity,
+      fees: d.fees,
+      ...executionFields,
+      planned_stop: d.planned_stop ?? null,
+      planned_target: d.planned_target ?? null,
+      strategy_tag: d.strategy_tag || null,
+      mistake_tags: d.mistake_tags ? d.mistake_tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      followed_plan: d.followed_plan === "yes" ? true : d.followed_plan === "no" ? false : null,
+      notes: d.notes || null,
+      thesis: d.thesis || null,
+      ...(screenshot_url ? { screenshot_url } : {}),
+    })
+    .eq("id", tradeId)
+    .eq("user_id", userId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/journal");
+  revalidatePath(`/journal/${tradeId}`);
+  redirect(`/journal/${tradeId}`);
+}
+
 export async function deleteTrade(tradeId: string) {
   const { userId } = await verifySession();
   const supabase = await createClient();
