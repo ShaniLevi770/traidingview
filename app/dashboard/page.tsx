@@ -22,6 +22,12 @@ function formatMoney(n: number | null): string {
 function formatPct(n: number | null): string {
   return n == null ? "—" : `${(n * 100).toFixed(0)}%`;
 }
+function formatStreak(streak: number): string {
+  if (streak === 0) return "—";
+  const count = Math.abs(streak);
+  const noun = streak > 0 ? (count > 1 ? "wins" : "win") : count > 1 ? "losses" : "loss";
+  return `${count} ${noun}`;
+}
 
 export default async function DashboardPage() {
   const { userId } = await verifySession();
@@ -43,8 +49,9 @@ export default async function DashboardPage() {
         <Stat label="Avg R" value={averageR(trades) != null ? `${averageR(trades)!.toFixed(2)}R` : "—"} />
         <Stat label="Avg win" value={formatMoney(averageWinLoss(trades).avgWin)} />
         <Stat label="Avg loss" value={formatMoney(averageWinLoss(trades).avgLoss)} />
-        <Stat label="Current streak" value={streak === 0 ? "—" : `${Math.abs(streak)} ${streak > 0 ? "win" : "loss"}${Math.abs(streak) > 1 ? "s" : ""}`} />
+        <Stat label="Current streak" value={formatStreak(streak)} />
         <Stat label="Closed trades" value={String(trades.filter((t) => t.status === "closed").length)} />
+        <Stat label="Open trades" value={String(trades.filter((t) => t.status === "open").length)} />
       </div>
 
       <section className="mb-8">
