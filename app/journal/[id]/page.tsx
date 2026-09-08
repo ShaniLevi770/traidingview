@@ -38,8 +38,8 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
   const r = trade.status === "closed" ? actualR(trade) : null;
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8">
-      <div className="mb-6">
+    <div className="w-full">
+      <div className="mx-auto w-full max-w-6xl px-4 pt-8">
         <h1 className="text-2xl font-semibold">
           {trade.symbol} <span className="font-normal capitalize text-zinc-500">· {trade.side}</span>
         </h1>
@@ -49,10 +49,14 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
         </p>
       </div>
 
-      <div className="mb-6 rounded border border-zinc-200 dark:border-zinc-800">
+      {/* Full viewport width, not capped by the page's reading-width container - a chart
+          this dense (months of daily candles) needs every pixel it can get, and the fixed
+          max-w column was making it cramped/unreadable regardless of screen size. */}
+      <div className="my-6 border-y border-zinc-200 dark:border-zinc-800">
         <TradingViewWidget symbol={trade.symbol} />
       </div>
 
+      <div className="mx-auto w-full max-w-6xl px-4 pb-8">
       {!trade.entry_known && (
         <p className="mb-4 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
           This trade&apos;s opening fill wasn&apos;t in the imported file (partial export) — entry price/date are
@@ -121,6 +125,7 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
           <Image src={screenshotUrl} alt={`${trade.symbol} trade screenshot`} width={800} height={500} className="rounded border border-zinc-200 dark:border-zinc-800" unoptimized />
         </div>
       )}
+      </div>
     </div>
   );
 }
