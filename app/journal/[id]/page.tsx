@@ -6,8 +6,6 @@ import { getSignedScreenshotUrl } from "@/lib/supabase/storage";
 import { getQuote, unrealizedPnl } from "@/lib/quotes/finnhub";
 import { moneyAtRisk, plannedRR, actualR } from "@/lib/analytics/metrics";
 import { TradingViewWidget } from "@/components/TradingViewWidget";
-import { deleteTrade } from "@/app/actions/trades";
-import { redirect } from "next/navigation";
 
 function formatMoney(n: number | null): string {
   if (n == null) return "—";
@@ -39,29 +37,16 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
   const rr = plannedRR(trade);
   const r = trade.status === "closed" ? actualR(trade) : null;
 
-  async function handleDelete() {
-    "use server";
-    await deleteTrade(trade!.id);
-    redirect("/journal");
-  }
-
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8">
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {trade.symbol} <span className="font-normal capitalize text-zinc-500">· {trade.side}</span>
-          </h1>
-          <p className="text-sm text-zinc-500">
-            {new Date(trade.entry_time).toLocaleString()}
-            {trade.exit_time && ` → ${new Date(trade.exit_time).toLocaleString()}`}
-          </p>
-        </div>
-        <form action={handleDelete}>
-          <button type="submit" className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 dark:border-red-900">
-            Delete
-          </button>
-        </form>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold">
+          {trade.symbol} <span className="font-normal capitalize text-zinc-500">· {trade.side}</span>
+        </h1>
+        <p className="text-sm text-zinc-500">
+          {new Date(trade.entry_time).toLocaleString()}
+          {trade.exit_time && ` → ${new Date(trade.exit_time).toLocaleString()}`}
+        </p>
       </div>
 
       <div className="mb-6 rounded border border-zinc-200 dark:border-zinc-800">
