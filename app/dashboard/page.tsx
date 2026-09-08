@@ -12,6 +12,8 @@ import {
   totalPnl,
   equityCurve,
 } from "@/lib/analytics/metrics";
+import { getHistoricalCloses } from "@/lib/quotes/stooq";
+import { alignBenchmarkToEquityCurve, type BenchmarkPoint } from "@/lib/analytics/benchmark";
 import { EquityCurveChart } from "@/components/EquityCurveChart";
 
 function formatMoney(n: number | null): string {
@@ -37,6 +39,16 @@ export default async function DashboardPage() {
 
   const adherence = ruleAdherenceSplit(trades);
   const streak = currentStreak(trades);
+  const curve = equityCurve(trades);
+
+  let benchmark: BenchmarkPoint[] | null = null;
+  if (curve.length > 0) {
+    const from = new Date(curve[0].date);
+    from.setDate(from.getDate() - 5); // a little padding before the first trade
+    const to = new Date(curve[curve.length - 1].date);
+    const spyCloses = await getHistoricalCloses("SPY", from, to);
+    if (spyCloses) benchmark = alignBenchmarkToEquityCurve(curve, spyCloses);
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -57,7 +69,7 @@ export default async function DashboardPage() {
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">Equity curve</h2>
         <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
-          <EquityCurveChart data={equityCurve(trades)} />
+          <EquityCurveChart data={curve} benchmark={benchmark} />
         </div>
       </section>
 
