@@ -53,7 +53,7 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
           this dense (months of daily candles) needs every pixel it can get, and the fixed
           max-w column was making it cramped/unreadable regardless of screen size. */}
       <div className="my-6 border-y border-zinc-200 dark:border-zinc-800">
-        <TradingViewWidget symbol={trade.symbol} />
+        <TradingViewWidget symbol={trade.symbol} entryTime={trade.entry_time} exitTime={trade.exit_time} />
       </div>
 
       <div className="mx-auto w-full max-w-6xl px-4 pb-8">
