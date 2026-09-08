@@ -37,6 +37,8 @@ export function averageWinLoss(trades: TradeRow[]): { avgWin: number | null; avg
 }
 
 export interface EquityPoint {
+  tradeId: string;
+  symbol: string;
   date: string; // ISO date of the trade's exit
   pnl: number; // this trade's pnl
   cumulativePnl: number;
@@ -50,7 +52,7 @@ export function equityCurve(trades: TradeRow[]): EquityPoint[] {
   let running = 0;
   return closed.map((t) => {
     running += t.pnl;
-    return { date: t.exit_time!, pnl: t.pnl, cumulativePnl: running };
+    return { tradeId: t.id, symbol: t.symbol, date: t.exit_time!, pnl: t.pnl, cumulativePnl: running };
   });
 }
 

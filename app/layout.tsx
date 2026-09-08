@@ -23,7 +23,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           <header className="border-b border-zinc-200 dark:border-zinc-800">
             <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
               <Link href="/journal" className="font-semibold">Journal</Link>
-              <Link href="/journal" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">Trades</Link>
               <Link href="/import" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">Import</Link>
               <Link href="/dashboard" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">Dashboard</Link>
               <form action={signOut} className="ml-auto">
