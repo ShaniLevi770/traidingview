@@ -25,6 +25,7 @@ export default function SignupPage() {
           <input name="password" type="password" required autoComplete="new-password" minLength={8} className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900" />
         </label>
         {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+        {state?.message && <p className="text-sm text-emerald-600">{state.message}</p>}
         <button
           type="submit"
           disabled={pending}
