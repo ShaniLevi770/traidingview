@@ -76,6 +76,6 @@ export function TradingViewWidget({
   }, [symbol, entryTime, exitTime]);
 
   return (
-    <div className="tradingview-widget-container h-[650px] w-full" ref={container} />
+    <div className="tradingview-widget-container h-[80vh] min-h-[500px] w-full" ref={container} />
   );
 }
