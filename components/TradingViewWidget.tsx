@@ -39,6 +39,6 @@ export function TradingViewWidget({ symbol }: { symbol: string }) {
   }, [symbol]);
 
   return (
-    <div className="tradingview-widget-container h-[600px] w-full" ref={container} />
+    <div className="tradingview-widget-container h-[650px] w-full" ref={container} />
   );
 }
