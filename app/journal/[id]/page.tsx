@@ -46,7 +46,7 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
   }
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8">
+    <div className="mx-auto w-full max-w-6xl px-4 py-8">
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">
