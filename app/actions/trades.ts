@@ -202,3 +202,20 @@ export async function deleteTrade(tradeId: string) {
   await supabase.from("trades").delete().eq("id", tradeId).eq("user_id", userId);
   revalidatePath("/journal");
 }
+
+export async function deleteTrades(tradeIds: string[]): Promise<{ error?: string; deleted?: number }> {
+  const { userId } = await verifySession();
+  if (tradeIds.length === 0) return { deleted: 0 };
+
+  const supabase = await createClient();
+  const { error, count } = await supabase
+    .from("trades")
+    .delete({ count: "exact" })
+    .eq("user_id", userId)
+    .in("id", tradeIds);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/journal");
+  return { deleted: count ?? tradeIds.length };
+}

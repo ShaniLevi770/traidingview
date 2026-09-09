@@ -2,13 +2,8 @@ import Link from "next/link";
 import { verifySession } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { getQuote, unrealizedPnl } from "@/lib/quotes/finnhub";
+import { JournalTable } from "@/components/JournalTable";
 import type { TradeRow } from "@/types/database";
-
-function formatMoney(n: number | null): string {
-  if (n == null) return "—";
-  const sign = n > 0 ? "+" : "";
-  return `${sign}${n.toLocaleString(undefined, { style: "currency", currency: "USD" })}`;
-}
 
 async function unrealizedFor(trade: TradeRow): Promise<number | null> {
   // entry_price is only ever null for entryKnown=false trades, which are
@@ -39,7 +34,7 @@ export default async function JournalPage() {
   const unrealizedEntries = await Promise.all(
     openTrades.map(async (t) => [t.id, await unrealizedFor(t)] as const),
   );
-  const unrealizedById = new Map(unrealizedEntries);
+  const unrealizedById = Object.fromEntries(unrealizedEntries);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -64,49 +59,7 @@ export default async function JournalPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded border border-zinc-200 dark:border-zinc-800">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead className="bg-zinc-100 text-left text-zinc-500 dark:bg-zinc-900">
-              <tr>
-                <th className="px-3 py-2 font-medium">Symbol</th>
-                <th className="px-3 py-2 font-medium">Side</th>
-                <th className="px-3 py-2 font-medium">Entry</th>
-                <th className="px-3 py-2 font-medium">Exit</th>
-                <th className="px-3 py-2 font-medium">P&amp;L</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Strategy</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((t) => {
-                const isOpen = t.status === "open";
-                const displayPnl = isOpen ? unrealizedById.get(t.id) ?? null : t.pnl;
-                return (
-                  <tr key={t.id} className="border-t border-zinc-200 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900">
-                    <td className="px-3 py-2">
-                      <Link href={`/journal/${t.id}`} className="font-medium underline-offset-2 hover:underline">
-                        {t.symbol}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2 capitalize">{t.side}</td>
-                    <td className="px-3 py-2">{new Date(t.entry_time).toLocaleDateString()}</td>
-                    <td className="px-3 py-2">{t.exit_time ? new Date(t.exit_time).toLocaleDateString() : "—"}</td>
-                    <td className={`px-3 py-2 font-medium ${displayPnl != null && displayPnl > 0 ? "text-emerald-600" : displayPnl != null && displayPnl < 0 ? "text-red-600" : ""}`}>
-                      {formatMoney(displayPnl)}
-                      {isOpen && displayPnl != null && <span className="ml-1 text-xs text-zinc-400">(unrealized)</span>}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className={`rounded px-1.5 py-0.5 text-xs ${isOpen ? "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"}`}>
-                        {t.status}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-zinc-500">{t.strategy_tag ?? "—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <JournalTable rows={rows} unrealizedById={unrealizedById} />
       )}
     </div>
   );
