@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { previewImport, commitImport, type ImportPreviewTrade } from "@/app/actions/import";
 import { detectLocalTimeZone } from "@/lib/time";
+import { PositionsSyncPanel } from "@/components/PositionsSyncPanel";
 
 const BROKERS = [{ id: "colmex", label: "Colmex Pro" }];
 
@@ -143,6 +144,10 @@ export default function ImportPage() {
           </button>
         </>
       )}
+
+      <hr className="my-10 border-zinc-200 dark:border-zinc-800" />
+
+      <PositionsSyncPanel />
     </div>
   );
 }
