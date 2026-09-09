@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { deleteTrades } from "@/app/actions/trades";
+import { deleteTrades, setStrategyForTrades } from "@/app/actions/trades";
 import { diagnoseTrades, type TradeDiagnosisResult } from "@/app/actions/diagnostics";
 import type { TradeRow } from "@/types/database";
 
@@ -31,6 +31,9 @@ export function JournalTable({
   const [deleting, setDeleting] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagnosis, setDiagnosis] = useState<TradeDiagnosisResult[] | null>(null);
+  const [tagging, setTagging] = useState(false);
+  const [strategyInput, setStrategyInput] = useState("");
+  const [showStrategyInput, setShowStrategyInput] = useState(false);
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
   const someSelected = selected.size > 0;
@@ -76,22 +79,75 @@ export function JournalTable({
     setDiagnosis(results);
   }
 
+  async function handleApplyStrategy() {
+    const ids = [...selected];
+    if (ids.length === 0 || !strategyInput.trim()) return;
+    setTagging(true);
+    const result = await setStrategyForTrades(ids, strategyInput);
+    setTagging(false);
+    if (result.error) {
+      window.alert(`Couldn't set strategy: ${result.error}`);
+      return;
+    }
+    setShowStrategyInput(false);
+    setStrategyInput("");
+    setSelected(new Set());
+    router.refresh();
+  }
+
   return (
     <div>
-      <div className="mb-3 flex min-h-[36px] items-center gap-2">
+      <div className="mb-3 flex min-h-[36px] flex-wrap items-center gap-2">
         {someSelected && (
           <>
             <span className="text-sm text-zinc-500">{selected.size} selected</span>
             <button
               onClick={handleDiagnoseSelected}
-              disabled={diagnosing || deleting}
+              disabled={diagnosing || deleting || tagging}
               className="rounded border border-zinc-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-zinc-700"
             >
               {diagnosing ? "Diagnosing…" : "Diagnose selected"}
             </button>
+            {showStrategyInput ? (
+              <>
+                <input
+                  autoFocus
+                  value={strategyInput}
+                  onChange={(e) => setStrategyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleApplyStrategy();
+                    if (e.key === "Escape") setShowStrategyInput(false);
+                  }}
+                  placeholder="e.g. breakout, VWAP reclaim"
+                  className="rounded border border-zinc-300 px-2 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+                />
+                <button
+                  onClick={handleApplyStrategy}
+                  disabled={tagging || !strategyInput.trim()}
+                  className="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+                >
+                  {tagging ? "Applying…" : `Apply to ${selected.size}`}
+                </button>
+                <button
+                  onClick={() => setShowStrategyInput(false)}
+                  disabled={tagging}
+                  className="text-sm text-zinc-500 hover:underline"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setShowStrategyInput(true)}
+                disabled={deleting || diagnosing}
+                className="rounded border border-zinc-300 px-3 py-1.5 text-sm disabled:opacity-50 dark:border-zinc-700"
+              >
+                Set strategy…
+              </button>
+            )}
             <button
               onClick={handleDeleteSelected}
-              disabled={deleting || diagnosing}
+              disabled={deleting || diagnosing || tagging}
               className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 disabled:opacity-50 dark:border-red-900"
             >
               {deleting ? "Deleting…" : "Delete selected"}

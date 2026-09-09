@@ -219,3 +219,24 @@ export async function deleteTrades(tradeIds: string[]): Promise<{ error?: string
   revalidatePath("/journal");
   return { deleted: count ?? tradeIds.length };
 }
+
+export async function setStrategyForTrades(
+  tradeIds: string[],
+  strategyTag: string,
+): Promise<{ error?: string; updated?: number }> {
+  const { userId } = await verifySession();
+  if (tradeIds.length === 0) return { updated: 0 };
+
+  const trimmed = strategyTag.trim();
+  const supabase = await createClient();
+  const { error, count } = await supabase
+    .from("trades")
+    .update({ strategy_tag: trimmed || null }, { count: "exact" })
+    .eq("user_id", userId)
+    .in("id", tradeIds);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/journal");
+  return { updated: count ?? tradeIds.length };
+}
