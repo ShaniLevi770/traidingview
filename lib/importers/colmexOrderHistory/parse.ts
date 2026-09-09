@@ -54,25 +54,34 @@ interface Header {
   executionFee: number;
 }
 
+// Maps each internal field to the CSV column name a user would actually see
+// in their export - used both to look the column up and, on a miss, to
+// report it back in the warning using that same recognizable name rather
+// than the internal camelCase key.
+const COLUMNS: { key: keyof Header; label: string }[] = [
+  { key: "symbol", label: "Symbol" },
+  { key: "side", label: "Side" },
+  { key: "type", label: "Type" },
+  { key: "filledQty", label: "Filled Qty" },
+  { key: "limitPrice", label: "Limit Price" },
+  { key: "stopPrice", label: "Stop Price" },
+  { key: "avgFillPrice", label: "Avg Fill Price" },
+  { key: "status", label: "Status" },
+  { key: "updateTime", label: "Update Time" },
+  { key: "grossPnl", label: "Gross P/L" },
+  { key: "executionFee", label: "Execution fee" },
+];
+
 function parseHeader(headerLine: string): { idx: Header; missing: string[] } {
   const header = headerLine.split(",").map((h) => h.trim().toLowerCase());
-  const col = (name: string) => header.indexOf(name);
-  const idx: Header = {
-    symbol: col("symbol"),
-    side: col("side"),
-    type: col("type"),
-    filledQty: col("filled qty"),
-    limitPrice: col("limit price"),
-    stopPrice: col("stop price"),
-    avgFillPrice: col("avg fill price"),
-    status: col("status"),
-    updateTime: col("update time"),
-    grossPnl: col("gross p/l"),
-    executionFee: col("execution fee"),
-  };
-  const missing = Object.entries(idx)
-    .filter(([, i]) => i === -1)
-    .map(([k]) => k);
+  const col = (label: string) => header.indexOf(label.toLowerCase());
+  const idx = {} as Header;
+  const missing: string[] = [];
+  for (const { key, label } of COLUMNS) {
+    const i = col(label);
+    idx[key] = i;
+    if (i === -1) missing.push(label);
+  }
   return { idx, missing };
 }
 
