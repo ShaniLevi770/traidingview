@@ -38,6 +38,9 @@ export interface ParsedTrade {
   entryKnown: boolean;
   note?: string;
   sourceExecutions: RawExecution[];
+  /** Optional - set by an importer whose export includes attached bracket-order levels (e.g. a Stop Loss/Take Profit order placed alongside the entry), via attachPlannedLevels below. Most importers leave these undefined; the risk-plan fields stay manual-only for them. */
+  plannedStop?: number | null;
+  plannedTarget?: number | null;
 }
 
 export interface ParseWarning {
@@ -58,4 +61,12 @@ export interface Importer {
   parseFile(raw: string, opts: { sourceTimeZone: string }): ParseResult;
   /** Groups executions (already time-sorted per symbol) into round-trip trades. */
   groupIntoTrades(executions: RawExecution[]): ParsedTrade[];
+  /**
+   * Optional: for a broker export that also carries bracket-order (stop
+   * loss / take profit) levels, backfills plannedStop/plannedTarget onto
+   * the already-grouped trades. Re-parses `raw` itself (rather than taking
+   * pre-extracted data as a param) so the Importer interface's shape stays
+   * uniform across brokers that do and don't support this.
+   */
+  attachPlannedLevels?(trades: ParsedTrade[], raw: string, opts: { sourceTimeZone: string }): ParsedTrade[];
 }
