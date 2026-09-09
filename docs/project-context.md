@@ -38,6 +38,22 @@ yet entered as trades. Discussed with the user as a possible "planned but
 not-yet-filled trades" feature; explicitly deferred, not requested. Don't
 build it without the user asking.
 
+**Open question worth resolving:** `colmexPositions/` and
+`colmexOrderHistory/` parse exports that come from **TradingView's own
+trading-panel UI**, not from Colmex's backend directly - and TradingView
+standardizes that panel's export format across every broker it integrates
+with. So these two importers may already work for *any* TradingView-
+connected broker, not just Colmex, despite the "colmex..." folder names -
+unverified, since we've only ever tested against real Colmex Pro samples.
+`colmex/` (the original "Filled orders" import) is different: that's
+Colmex's own terminal's proprietary format, genuinely Colmex-specific. If
+a user brings a real export from a different TradingView-connected broker,
+try it against `colmexOrderHistory`'s parser as-is before writing a new
+importer - it may just work. If it does, worth renaming the id/folder to
+something broker-neutral (e.g. `tradingViewOrderHistory`) - but do that
+deliberately, since the broker id is already stored on real `csv_imports`/
+`trades` rows.
+
 Grouping trusts each broker's own reported realized P&L per closing fill
 (no FIFO cost-basis reimplementation) — see `docs/project-plan.md`'s
 "Colmex CSV format" section for the full reasoning and the `entryKnown:
@@ -190,3 +206,14 @@ tag)` — both scoped to `user_id`, never trust RLS alone.
 - No aggregate/cross-trade analytics view yet (see "Discussed but not yet
   built" above) — this is the natural next step if the user wants to keep
   going on the "help users learn their mistakes" thread.
+- Whether `colmexPositions`/`colmexOrderHistory` already work for
+  non-Colmex TradingView-connected brokers — see the "Open question" under
+  "Import pipeline" above.
+- Diagnosis skip message UX: when a trade is skipped for having no
+  planned_stop/planned_target, the skip reason (`app/actions/
+  diagnostics.ts`) is currently just flat text with no next step. The user
+  suggested it should point them toward fixing it - e.g. "sync via
+  Positions" (open trades) or "re-import via Order History" (closed
+  trades, since that backfills planned levels retroactively) - rather than
+  just saying "nothing to compare it against." Small, well-scoped UI
+  change; not yet built.
