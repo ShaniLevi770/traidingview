@@ -31,6 +31,7 @@ const TradeSchema = z
     followed_plan: z.enum(["yes", "no", ""]).optional(),
     notes: z.string().optional(),
     thesis: z.string().optional(),
+    exit_reason: z.string().optional(),
   })
   .refine((data) => (data.exit_price == null) === (!data.exit_time), {
     message: "Provide both an exit price and exit date, or neither (still open).",
@@ -82,6 +83,7 @@ export async function createTrade(_prevState: TradeFormState, formData: FormData
     followed_plan: d.followed_plan === "yes" ? true : d.followed_plan === "no" ? false : null,
     notes: d.notes || null,
     thesis: d.thesis || null,
+    exit_reason: d.exit_reason || null,
     screenshot_url,
     source: "manual",
   });
@@ -115,6 +117,7 @@ const EditTradeSchema = z
     followed_plan: z.enum(["yes", "no", ""]).optional(),
     notes: z.string().optional(),
     thesis: z.string().optional(),
+    exit_reason: z.string().optional(),
   })
   .refine((data) => (data.exit_price == null) === (!data.exit_time), {
     message: "Provide both an exit price and exit date, or neither (still open).",
@@ -136,11 +139,26 @@ export async function updateTrade(tradeId: string, _prevState: TradeFormState, f
 
   const { data: existing } = await supabase
     .from("trades")
-    .select("pnl, status, entry_known")
+    .select("pnl, status, entry_known, exit_price, exit_time, planned_stop, planned_target, diagnosis_generated_at")
     .eq("id", tradeId)
     .eq("user_id", userId)
     .single();
   if (!existing) return { error: "Trade not found." };
+
+  // A previously-generated diagnosis (see app/actions/diagnostics.ts) was
+  // computed from a specific exit price/time and plan - if any of those
+  // change, that diagnosis no longer reflects this trade, so clear it and
+  // let it regenerate next time reviews are checked, rather than leaving a
+  // stale verdict (or a wrongly-still-"unread" one) attached.
+  const diagnosisInputsChanged =
+    existing.diagnosis_generated_at != null &&
+    (String(d.exit_price ?? null) !== String(existing.exit_price) ||
+      (d.exit_time ? new Date(d.exit_time).toISOString() : null) !== existing.exit_time ||
+      String(d.planned_stop ?? null) !== String(existing.planned_stop) ||
+      String(d.planned_target ?? null) !== String(existing.planned_target));
+  const diagnosisReset = diagnosisInputsChanged
+    ? { diagnosis: null, diagnosis_generated_at: null, diagnosis_viewed_at: null }
+    : {};
 
   // Only recompute entry/exit/pnl/status as a bundle when an entry price was
   // actually provided - otherwise leave those fields exactly as they are
@@ -183,6 +201,8 @@ export async function updateTrade(tradeId: string, _prevState: TradeFormState, f
       followed_plan: d.followed_plan === "yes" ? true : d.followed_plan === "no" ? false : null,
       notes: d.notes || null,
       thesis: d.thesis || null,
+      exit_reason: d.exit_reason || null,
+      ...diagnosisReset,
       ...(screenshot_url ? { screenshot_url } : {}),
     })
     .eq("id", tradeId)

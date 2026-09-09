@@ -6,8 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSignedScreenshotUrl } from "@/lib/supabase/storage";
 import { getQuote, unrealizedPnl } from "@/lib/quotes/finnhub";
 import { moneyAtRisk, plannedRR, actualR } from "@/lib/analytics/metrics";
+import type { Finding } from "@/lib/analytics/postTradeDiagnosis";
 import { TradingViewWidget } from "@/components/TradingViewWidget";
 import { TradeReviewChart } from "@/components/TradeReviewChart";
+import { findingLabel } from "@/components/findingLabels";
 
 function formatMoney(n: number | null): string {
   if (n == null) return "—";
@@ -129,10 +131,36 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
         </div>
       )}
 
-      {trade.thesis && (
-        <div className="mb-6">
-          <h2 className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">Thesis / setup</h2>
-          <p className="whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">{trade.thesis}</p>
+      {(trade.thesis || trade.exit_reason) && (
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
+          {trade.thesis && (
+            <div>
+              <h2 className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">Why I entered</h2>
+              <p className="whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">{trade.thesis}</p>
+            </div>
+          )}
+          {trade.exit_reason && (
+            <div>
+              <h2 className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">Why I exited</h2>
+              <p className="whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">{trade.exit_reason}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {trade.diagnosis != null && (trade.diagnosis as Finding[]).length > 0 && (
+        <div className="mb-6 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+          <h2 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">Review</h2>
+          <ul className="list-inside list-disc space-y-1">
+            {(trade.diagnosis as Finding[]).map((f, i) => (
+              <li key={i} className="text-sm text-zinc-600 dark:text-zinc-300">
+                <span className="mr-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 dark:bg-amber-950 dark:text-amber-400">
+                  {findingLabel[f.kind]}
+                </span>
+                {f.message}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

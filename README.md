@@ -82,6 +82,8 @@ components/
   TradingViewWidget.tsx             — the embedded TradingView chart
   TradeReviewChart.tsx              — self-built entry/exit/stop/target chart (Recharts + Stooq)
   JournalTable.tsx                  — journal list with bulk select/delete/diagnose/tag
+  TradeReviewsPanel.tsx             — auto-surfaced "did I stick to my plan" reviews, ~a
+                                       month after a trade closes (see docs/project-context.md)
   EquityCurveChart.tsx              — dashboard equity curve (+ S&P 500 overlay toggle)
 proxy.ts                            — session refresh + route protection (Next.js 16+ renamed middleware.ts to this)
 supabase/migrations/                — SQL schema + RLS policies + storage bucket

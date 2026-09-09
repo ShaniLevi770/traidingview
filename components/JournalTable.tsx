@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { deleteTrades, setStrategyForTrades } from "@/app/actions/trades";
 import { diagnoseTrades, type TradeDiagnosisResult } from "@/app/actions/diagnostics";
+import { findingLabel } from "@/components/findingLabels";
 import type { TradeRow } from "@/types/database";
 
 function formatMoney(n: number | null): string {
@@ -12,15 +13,6 @@ function formatMoney(n: number | null): string {
   const sign = n > 0 ? "+" : "";
   return `${sign}${n.toLocaleString(undefined, { style: "currency", currency: "USD" })}`;
 }
-
-const findingLabel: Record<TradeDiagnosisResult["findings"][number]["kind"], string> = {
-  target_reachable_not_captured: "Target reachable, not captured",
-  continued_after_exit: "Kept moving after exit",
-  recovered_after_stop: "Recovered after stop",
-  premature_exit_missed_target: "Exited early — target would have hit",
-  premature_exit_dodged_stop: "Exited early — dodged the stop",
-  premature_exit_ambiguous: "Exited early — outcome unclear",
-};
 
 export function JournalTable({
   rows,

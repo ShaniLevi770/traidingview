@@ -2,7 +2,9 @@ import Link from "next/link";
 import { verifySession } from "@/lib/supabase/dal";
 import { createClient } from "@/lib/supabase/server";
 import { getQuote, unrealizedPnl } from "@/lib/quotes/finnhub";
+import { getMaturedReviews } from "@/app/actions/diagnostics";
 import { JournalTable } from "@/components/JournalTable";
+import { TradeReviewsPanel } from "@/components/TradeReviewsPanel";
 import type { TradeRow } from "@/types/database";
 
 async function unrealizedFor(trade: TradeRow): Promise<number | null> {
@@ -35,6 +37,10 @@ export default async function JournalPage() {
     openTrades.map(async (t) => [t.id, await unrealizedFor(t)] as const),
   );
   const unrealizedById = Object.fromEntries(unrealizedEntries);
+  // Best-effort: a matured trade whose Stooq lookup fails just stays pending
+  // and is retried on a future visit (see getMaturedReviews) rather than
+  // blocking the page.
+  const maturedReviews = await getMaturedReviews();
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -49,6 +55,8 @@ export default async function JournalPage() {
           </Link>
         </div>
       </div>
+
+      <TradeReviewsPanel reviews={maturedReviews} />
 
       {rows.length === 0 ? (
         <div className="rounded border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">

@@ -143,8 +143,36 @@ Finding kinds, in the order they're checked:
    level would have been hit first. Ambiguous when both fall in the same
    day's range (daily bars can't resolve intraday order).
 
-Surfaced via the Journal page's multi-select "Diagnose selected" action
-(`components/JournalTable.tsx` → `app/actions/diagnostics.ts`).
+Surfaced two ways now (both go through the same `diagnoseOne` helper in
+`app/actions/diagnostics.ts`, so on-demand and auto-surfaced results agree):
+- On-demand: the Journal page's multi-select "Diagnose selected" action
+  (`components/JournalTable.tsx`).
+- Auto-surfaced: `getMaturedReviews()` — once a closed trade (with a full
+  plan) is ~30 days past its exit, its diagnosis is generated automatically
+  and shown in `components/TradeReviewsPanel.tsx` at the top of the Journal
+  page until dismissed (`markReviewsViewed`). In-app only, no email/push —
+  deliberately pull-based (generated lazily whenever the Journal page loads
+  and notices a newly-matured trade) rather than a scheduled job, since
+  this stack has no cron/background-worker infra. `diagnosis` /
+  `diagnosis_generated_at` / `diagnosis_viewed_at` on `trades` persist the
+  result so it's not recomputed (repeat Stooq calls) on every visit, and so
+  "seen" state is trackable. A trade whose diagnosis actually completed
+  (bars fetched, checks ran) is the only case that gets persisted — a
+  structural skip (still open, no plan yet, symbol's history unavailable
+  right now) deliberately leaves `diagnosis_generated_at` null so it's
+  retried later instead of getting permanently stuck unreviewed. Editing a
+  trade's exit price/time or planned stop/target after a diagnosis exists
+  clears the persisted diagnosis (`app/actions/trades.ts`'s
+  `updateTrade`), since it was computed from now-stale inputs.
+
+This pairs with two new freeform fields on `trades`: `thesis` (already
+existed — "why I entered") and `exit_reason` (new — "why I exited at this
+price"), shown together on the trade detail page and in each review card,
+next to the plan (`entry_price` → `planned_stop`/`planned_target` →
+`exit_price`) they're supposed to explain. Kept as plain freeform text
+(not structured/guided prompts) — a deliberate scope call, not an
+oversight; revisit if free text turns out too inconsistent to be useful
+once there's more data.
 
 ### Discussed but not yet built (the user asked for more scenarios; these were proposed, not requested outright)
 
@@ -217,3 +245,11 @@ tag)` — both scoped to `user_id`, never trust RLS alone.
   trades, since that backfills planned levels retroactively) - rather than
   just saying "nothing to compare it against." Small, well-scoped UI
   change; not yet built.
+- Auto-surfaced trade reviews (`TradeReviewsPanel`, see "Post-trade
+  diagnosis" above) are new and unverified live for the same reason as the
+  rest of the Stooq-backed features — this sandbox can't reach stooq.com,
+  so the generation path (`getMaturedReviews`) has only been exercised via
+  `npm run build`'s type-checking, not a real matured trade. Also: nothing
+  in this repo has a trade old enough yet to hit the 30-day maturity
+  window live — the first real signal on this will come whenever the
+  user's oldest post-launch closed trade crosses that mark.

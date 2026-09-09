@@ -137,8 +137,12 @@ export function TradeForm({
           <input name="mistake_tags" defaultValue={trade?.mistake_tags?.join(", ")} className={inputClass} />
         </label>
         <label className={labelClass}>
-          Thesis / setup reasoning
+          Thesis / setup reasoning <span className="text-zinc-400">(what you saw, why this entry/stop/target)</span>
           <textarea name="thesis" rows={2} defaultValue={trade?.thesis ?? undefined} className={inputClass} />
+        </label>
+        <label className={labelClass}>
+          Exit reason <span className="text-zinc-400">(why you sold here - fill in once you close the trade)</span>
+          <textarea name="exit_reason" rows={2} defaultValue={trade?.exit_reason ?? undefined} className={inputClass} />
         </label>
         <label className={labelClass}>
           Notes

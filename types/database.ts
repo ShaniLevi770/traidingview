@@ -35,8 +35,17 @@ export interface TradeRow {
   mistake_tags: string[];
   followed_plan: boolean | null;
   notes: string | null;
+  /** Why the trade was entered - what was seen, why this stop/target. */
   thesis: string | null;
+  /** Why it was exited at that price - the closing counterpart to `thesis`. */
+  exit_reason: string | null;
   screenshot_url: string | null;
+
+  /** Persisted output of lib/analytics/postTradeDiagnosis.ts, as Finding[] - see app/actions/diagnostics.ts. Null until generated. */
+  diagnosis: { kind: string; message: string }[] | null;
+  diagnosis_generated_at: string | null;
+  /** Set once the user has seen this trade's auto-surfaced review (see TradeReviewsPanel). Null = pending/unread. */
+  diagnosis_viewed_at: string | null;
 
   source: TradeSource;
   import_batch_id: string | null;
