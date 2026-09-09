@@ -14,7 +14,7 @@ export interface TradeDiagnosisResult {
   skippedReason?: string;
 }
 
-const POST_EXIT_WINDOW_DAYS = 14;
+const POST_EXIT_WINDOW_DAYS = 30; // must match lib/analytics/postTradeDiagnosis.ts
 
 function addDays(isoDate: string, days: number): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
@@ -24,12 +24,16 @@ function addDays(isoDate: string, days: number): string {
 
 /**
  * "Diagnose" a set of already-closed trades: for each, pulls daily price
- * history spanning the trade plus ~2 weeks after exit, and checks for
- * simple after-the-fact lessons (target touched but not captured, price
- * kept running after exit, or recovered after a stop-out) - see
- * lib/analytics/postTradeDiagnosis.ts for the actual checks. Best-effort:
- * a trade that's still open, or whose symbol has no available price
- * history, is reported back as skipped rather than failing the whole batch.
+ * history spanning the trade plus ~a month after exit (sized for swing
+ * trades, not day trading), and checks for simple after-the-fact lessons -
+ * see lib/analytics/postTradeDiagnosis.ts for the actual checks, including
+ * the main one: if you exited manually before either your stop or target
+ * was hit, which one would have happened first had you stayed in. Only
+ * runs on trades that had both a planned stop and target set - a "mistake"
+ * only means something relative to a plan that existed. Best-effort: a
+ * trade that's still open, has no plan, or whose symbol has no available
+ * price history, is reported back as skipped rather than failing the whole
+ * batch.
  */
 export async function diagnoseTrades(tradeIds: string[]): Promise<TradeDiagnosisResult[]> {
   const { userId } = await verifySession();
@@ -49,6 +53,13 @@ export async function diagnoseTrades(tradeIds: string[]): Promise<TradeDiagnosis
   for (const t of trades) {
     if (t.status !== "closed" || t.exit_price == null || t.exit_time == null || t.entry_price == null) {
       results.push({ tradeId: t.id, symbol: t.symbol, findings: [], skippedReason: "Trade is still open (or entry unknown) - nothing to diagnose yet." });
+      continue;
+    }
+    // These checks only mean something relative to a plan the trade actually
+    // had - a trade with no stop/target set has nothing to have deviated
+    // from, so it's skipped rather than guessed at.
+    if (t.planned_stop == null || t.planned_target == null) {
+      results.push({ tradeId: t.id, symbol: t.symbol, findings: [], skippedReason: "No stop/target was set for this trade - nothing to compare it against." });
       continue;
     }
 
