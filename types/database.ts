@@ -28,6 +28,8 @@ export interface TradeRow {
 
   planned_stop: number | null;
   planned_target: number | null;
+  /** Free text, e.g. "2-3 days" - how long the trade was expected to take to reach profit. */
+  expected_duration: string | null;
 
   strategy_tag: string | null;
   mistake_tags: string[];

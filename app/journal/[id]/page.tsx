@@ -92,6 +92,9 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
               <span className="text-zinc-500">(P&amp;L ÷ $ at risk)</span>
             </p>
           )}
+          {trade.expected_duration && (
+            <p className="mt-1 text-sm text-zinc-500">Expected to take: {trade.expected_duration}</p>
+          )}
         </div>
       )}
 
