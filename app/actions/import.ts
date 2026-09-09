@@ -18,6 +18,8 @@ export interface ImportPreviewTrade {
   status: "open" | "closed";
   entryKnown: boolean;
   note?: string;
+  plannedStop?: number | null;
+  plannedTarget?: number | null;
 }
 
 export interface PreviewResult {
@@ -40,6 +42,8 @@ function toPreview(t: ParsedTrade): ImportPreviewTrade {
     status: t.status,
     entryKnown: t.entryKnown,
     note: t.note,
+    plannedStop: t.plannedStop,
+    plannedTarget: t.plannedTarget,
   };
 }
 
@@ -54,7 +58,11 @@ export async function previewImport(
   if (!importer) return { trades: [], warnings: [], error: `Unknown broker "${broker}".` };
 
   const { executions, warnings } = importer.parseFile(csvText, { sourceTimeZone });
-  const trades = importer.groupIntoTrades(executions).map(toPreview);
+  let grouped = importer.groupIntoTrades(executions);
+  if (importer.attachPlannedLevels) {
+    grouped = importer.attachPlannedLevels(grouped, csvText, { sourceTimeZone });
+  }
+  const trades = grouped.map(toPreview);
 
   return { trades, warnings };
 }
@@ -71,7 +79,10 @@ export async function commitImport(
   if (!importer) return { error: `Unknown broker "${broker}".` };
 
   const { executions } = importer.parseFile(csvText, { sourceTimeZone });
-  const trades = importer.groupIntoTrades(executions);
+  let trades = importer.groupIntoTrades(executions);
+  if (importer.attachPlannedLevels) {
+    trades = importer.attachPlannedLevels(trades, csvText, { sourceTimeZone });
+  }
 
   const supabase = await createClient();
 
@@ -98,6 +109,8 @@ export async function commitImport(
       fees: t.fees,
       pnl: t.pnl,
       status: t.status,
+      planned_stop: t.plannedStop ?? null,
+      planned_target: t.plannedTarget ?? null,
       notes: t.entryKnown ? null : t.note,
       source: "colmex_csv" as const,
       import_batch_id: importRow.id,

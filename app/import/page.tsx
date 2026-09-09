@@ -6,7 +6,10 @@ import { previewImport, commitImport, type ImportPreviewTrade } from "@/app/acti
 import { detectLocalTimeZone } from "@/lib/time";
 import { PositionsSyncPanel } from "@/components/PositionsSyncPanel";
 
-const BROKERS = [{ id: "colmex", label: "Colmex Pro" }];
+const BROKERS = [
+  { id: "colmexOrderHistory", label: "Colmex Pro (Order History - All) - recommended" },
+  { id: "colmex", label: "Colmex Pro (Filled orders)" },
+];
 
 function formatMoney(n: number | null): string {
   if (n == null) return "—";
@@ -57,7 +60,9 @@ export default function ImportPage() {
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold">Import trades</h1>
       <p className="mb-6 text-sm text-zinc-500">
-        Export your trade history from Colmex Pro (MTS account → Trade History → date range → Excel/CSV) and upload it here.
+        Export your trade history from Colmex Pro / TradingView (Order History → date range → export) and upload it here.
+        The &quot;Order History (All)&quot; export is recommended — it also carries your Stop Loss/Take Profit orders, so
+        planned risk levels get filled in automatically, even for trades that are already closed.
       </p>
 
       <div className="mb-6 flex flex-col gap-4 rounded border border-zinc-200 p-4 dark:border-zinc-800">
