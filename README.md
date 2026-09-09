@@ -4,11 +4,15 @@ A multi-user trading journal for beginners: log trades (with a pre-trade risk
 plan, not just the outcome), see the real TradingView chart next to each one,
 import your Colmex Pro trade history from CSV, and get performance insights
 — including whether following your own plan actually correlates with better
-results.
+results, and post-trade checks on whether you actually stuck to your plan.
 
-See `/root/.claude/plans/lexical-weaving-rose.md` (or ask in-session) for the
-full project plan and the reasoning behind the architecture below — this
-README covers setup only.
+For the reasoning behind the architecture and everything built since the
+original plan (including decisions/gotchas that aren't obvious from the code
+alone), see:
+- `docs/project-plan.md` — the original MVP plan.
+- `docs/project-context.md` — what's been built beyond it, and why. **Read
+  this before picking up work here** — it's also auto-loaded via
+  `CLAUDE.md` for Claude Code sessions.
 
 ## Stack
 
@@ -18,6 +22,9 @@ README covers setup only.
   API exists for pulling TradingView's own data — see the plan)
 - **Finnhub** — current-price quotes, used only for unrealized P&L on open
   positions (a separate concern from the chart widget)
+- **Stooq** — free historical daily/weekly/monthly price data (no API key),
+  used for the S&P 500 dashboard overlay, the post-trade diagnosis checks,
+  and the trade review chart
 
 ## Setup
 
@@ -39,27 +46,48 @@ README covers setup only.
 ```
 app/
   (auth)/login, (auth)/signup      — auth pages
-  journal/                          — trade list, detail, new-trade form
-  import/                           — CSV import (upload → preview → commit)
-  dashboard/                        — analytics
-  actions/                          — Server Actions (auth, trades, import)
+  journal/                          — trade list (bulk select/delete/diagnose/tag),
+                                       trade detail (+ TradingView chart, trade review
+                                       chart, risk plan), new/edit trade forms
+  import/                           — CSV import (upload → preview → commit) +
+                                       Positions Sync panel
+  dashboard/                        — analytics (equity curve, S&P 500 overlay)
+  actions/                          — Server Actions: auth, trades, import,
+                                       positionsSync, diagnostics, priceHistory
   api/quotes/[symbol]/              — current-price lookup (Finnhub)
 lib/
-  analytics/metrics.ts              — pure functions: win rate, R-multiples,
-                                       equity curve, plan-adherence split, etc.
-                                       Deliberately isolated from UI/DB code,
-                                       so a future Python service could take
-                                       over the more advanced analysis later.
+  analytics/
+    metrics.ts                       — pure functions: win rate, R-multiples,
+                                        equity curve, plan-adherence split, etc.
+                                        Deliberately isolated from UI/DB code,
+                                        so a future Python service could take
+                                        over the more advanced analysis later.
+    benchmark.ts                     — aligns S&P 500 closes to the equity curve
+    postTradeDiagnosis.ts            — "did I stick to my plan" checks (see docs/project-context.md)
+    tradeReviewRange.ts              — date-range math for the trade review chart
   importers/
     types.ts                        — the `Importer` interface every broker module implements
-    colmex/                         — Colmex Pro CSV parsing + trade grouping
+    colmex/                         — "Filled orders" export: CSV parsing + trade grouping
+    colmexPositions/                — "Positions" export: live TP/SL for open trades
+    colmexOrderHistory/             — "Order History (All)" export: full history +
+                                       backfills planned stop/target, even for closed trades
     (add a new broker as a sibling folder here — see types.ts)
-  quotes/finnhub.ts                 — current price lookups (open positions only)
+  quotes/
+    finnhub.ts                       — current price lookups (open positions only)
+    stooq.ts, stooq-parse.ts         — historical daily/weekly/monthly OHLC
   supabase/                         — Supabase client helpers (browser/server/DAL/storage)
-  time.ts                           — timezone conversion (CSV wall-clock → UTC; UTC → market time for analytics)
+  time.ts                           — timezone conversion (CSV wall-clock → UTC; UTC → market
+                                       time for analytics) + shared calendar-arithmetic helper
+components/
+  TradingViewWidget.tsx             — the embedded TradingView chart
+  TradeReviewChart.tsx              — self-built entry/exit/stop/target chart (Recharts + Stooq)
+  JournalTable.tsx                  — journal list with bulk select/delete/diagnose/tag
+  EquityCurveChart.tsx              — dashboard equity curve (+ S&P 500 overlay toggle)
 proxy.ts                            — session refresh + route protection (Next.js 16+ renamed middleware.ts to this)
 supabase/migrations/                — SQL schema + RLS policies + storage bucket
-scripts/verify-colmex-import.ts     — manual check: `npx tsx scripts/verify-colmex-import.ts <csv>`
+scripts/verify-*.ts                 — manual verification scripts (this repo has no automated
+                                       test suite — these are the closest thing to regression
+                                       tests; run any of them with `npx tsx scripts/verify-....ts`)
 ```
 
 ## Notable implementation details
@@ -76,6 +104,8 @@ scripts/verify-colmex-import.ts     — manual check: `npx tsx scripts/verify-co
   real UTC instants for storage. Analytics that care about time-of-day
   read back in US/Eastern (`lib/time.ts`), regardless of the viewer's
   timezone.
-- **Risk-planning fields** (`planned_stop`, `planned_target`) are optional
-  and manual-only — a CSV import has no way to know trade intent. Importing
-  a trade is meant to be followed by reviewing it and filling these in.
+- **Risk-planning fields** (`planned_stop`, `planned_target`) can come from
+  three places: manual entry, the Positions Sync panel (currently-open
+  trades only), or the Order History importer (backfills closed trades
+  too). The post-trade diagnosis feature only runs on trades where both are
+  set — see `docs/project-context.md`.
