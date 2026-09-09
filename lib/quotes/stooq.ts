@@ -2,11 +2,13 @@ import "server-only";
 import { parseStooqCsv, type DailyClose } from "@/lib/quotes/stooq-parse";
 
 /**
- * Historical daily closes, free, no API key - used only for the S&P 500
- * overlay on the dashboard equity curve. Separate from lib/quotes/finnhub.ts
- * (current-price quotes for open positions) because Finnhub's free tier
- * blocks historical/candle data (403) - confirmed while planning this
- * feature, so a different provider was needed just for this.
+ * Historical daily/weekly/monthly bars, free, no API key. Originally added
+ * just for the S&P 500 overlay on the dashboard equity curve (daily only);
+ * now also backs the post-trade diagnosis checks and the trade review
+ * chart, both of which need the interval choice. Separate from
+ * lib/quotes/finnhub.ts (current-price quotes for open positions) because
+ * Finnhub's free tier blocks historical/candle data (403) - confirmed
+ * while planning the S&P 500 feature, so a different provider was needed.
  *
  * NOTE: this session's own sandbox network policy blocks external hosts
  * (including stooq.com), so this couldn't be exercised against a live
@@ -18,6 +20,7 @@ import { parseStooqCsv, type DailyClose } from "@/lib/quotes/stooq-parse";
  */
 
 export type { DailyClose };
+export type BarInterval = "d" | "w" | "m";
 
 interface CacheEntry {
   data: DailyClose[];
@@ -40,14 +43,15 @@ export async function getHistoricalCloses(
   symbol: string,
   from: Date,
   to: Date,
+  interval: BarInterval = "d",
 ): Promise<DailyClose[] | null> {
-  const cacheKey = `${symbol}:${yyyymmdd(from)}:${yyyymmdd(to)}`;
+  const cacheKey = `${symbol}:${yyyymmdd(from)}:${yyyymmdd(to)}:${interval}`;
   const cached = cache.get(cacheKey);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
     return cached.data;
   }
 
-  const url = `https://stooq.com/q/d/l/?s=${toStooqSymbol(symbol)}&d1=${yyyymmdd(from)}&d2=${yyyymmdd(to)}&i=d`;
+  const url = `https://stooq.com/q/d/l/?s=${toStooqSymbol(symbol)}&d1=${yyyymmdd(from)}&d2=${yyyymmdd(to)}&i=${interval}`;
 
   let res: Response;
   try {

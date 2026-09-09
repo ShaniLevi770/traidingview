@@ -7,6 +7,7 @@ import { getSignedScreenshotUrl } from "@/lib/supabase/storage";
 import { getQuote, unrealizedPnl } from "@/lib/quotes/finnhub";
 import { moneyAtRisk, plannedRR, actualR } from "@/lib/analytics/metrics";
 import { TradingViewWidget } from "@/components/TradingViewWidget";
+import { TradeReviewChart } from "@/components/TradeReviewChart";
 
 function formatMoney(n: number | null): string {
   if (n == null) return "—";
@@ -95,6 +96,20 @@ export default async function TradeDetailPage({ params }: { params: Promise<{ id
           {trade.expected_duration && (
             <p className="mt-1 text-sm text-zinc-500">Expected to take: {trade.expected_duration}</p>
           )}
+        </div>
+      )}
+
+      {trade.entry_known && trade.entry_price != null && (
+        <div className="mb-6 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+          <TradeReviewChart
+            symbol={trade.symbol}
+            entryTime={trade.entry_time}
+            exitTime={trade.exit_time}
+            entryPrice={trade.entry_price}
+            exitPrice={trade.exit_price}
+            plannedStop={trade.planned_stop}
+            plannedTarget={trade.planned_target}
+          />
         </div>
       )}
 
