@@ -91,6 +91,13 @@ export function easternParts(date: Date): {
   };
 }
 
+/** Adds `days` (may be negative) to an ISO calendar date (YYYY-MM-DD), returning YYYY-MM-DD. Pure calendar arithmetic (UTC-anchored) - not tied to any timezone's wall clock, so it's the right tool for "N days after this trading day" math (post-trade diagnosis windows, chart date ranges), not for converting real timestamps. */
+export function addIsoDays(isoDate: string, days: number): string {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Best-effort IANA timezone of the current browser/runtime. */
 export function detectLocalTimeZone(): string {
   try {
