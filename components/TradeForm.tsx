@@ -106,6 +106,10 @@ export function TradeForm({
             <input name="planned_target" type="number" step="any" defaultValue={trade?.planned_target ?? undefined} className={inputClass} />
           </label>
         </div>
+        <label className={labelClass}>
+          Expected time to target <span className="text-zinc-400">(e.g. &quot;2-3 days&quot;, &quot;a few hours&quot;)</span>
+          <input name="expected_duration" defaultValue={trade?.expected_duration ?? undefined} className={inputClass} />
+        </label>
       </fieldset>
 
       <fieldset className="flex flex-col gap-4">

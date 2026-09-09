@@ -11,6 +11,14 @@ import { useEffect, useRef } from "react";
  * `symbol` is passed as-is (e.g. "AAPL") - the widget resolves a bare
  * ticker to a default listing itself. `allow_symbol_change` lets the user
  * correct it in-widget if it resolves to the wrong exchange.
+ *
+ * DOM structure matches TradingView's own reference embed snippet exactly
+ * (outer .tradingview-widget-container + inner .tradingview-widget-container__widget,
+ * both with an explicit inline height): autosize only reliably fills a
+ * container that's actually got a real, inline-styled height by the time
+ * the script runs - a Tailwind arbitrary-value class was used previously,
+ * which is less certain to have taken effect, and the single-div structure
+ * (no inner __widget element) doesn't match what the script expects.
  */
 
 // Widget-supported preset ranges, smallest to largest.
@@ -47,14 +55,22 @@ export function TradingViewWidget({
   const container = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = container.current;
-    if (!el) return;
-    el.innerHTML = "";
+    const outer = container.current;
+    if (!outer) return;
+    outer.innerHTML = "";
 
     const durationDays = entryTime
       ? (new Date(exitTime ?? Date.now()).getTime() - new Date(entryTime).getTime()) / 86_400_000
       : null;
     const range = durationDays != null ? defaultRangeFor(Math.max(durationDays, 0)) : "3M";
+
+    // Inner mount point - TradingView's script targets this specifically
+    // when present, matching their own reference snippet.
+    const widgetDiv = document.createElement("div");
+    widgetDiv.className = "tradingview-widget-container__widget";
+    widgetDiv.style.height = "100%";
+    widgetDiv.style.width = "100%";
+    outer.appendChild(widgetDiv);
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
@@ -70,12 +86,19 @@ export function TradingViewWidget({
       style: "1",
       locale: "en",
       allow_symbol_change: true,
+      hide_side_toolbar: false, // show the drawing-tools sidebar (trend lines, fib, etc.) - useful for the trade thesis/notes
+      withdateranges: true,
+      details: true,
       support_host: "https://www.tradingview.com",
     });
-    el.appendChild(script);
+    outer.appendChild(script);
   }, [symbol, entryTime, exitTime]);
 
   return (
-    <div className="tradingview-widget-container h-[80vh] min-h-[500px] w-full" ref={container} />
+    <div
+      className="tradingview-widget-container w-full"
+      style={{ height: "85vh", minHeight: 600 }}
+      ref={container}
+    />
   );
 }
